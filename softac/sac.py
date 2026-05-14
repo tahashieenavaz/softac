@@ -1,13 +1,8 @@
-import random
 from collections import namedtuple
 from dataclasses import dataclass
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import tyro
 import brax.envs
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
@@ -41,11 +36,8 @@ Batch = namedtuple("Batch", ["obs", "next_obs", "actions", "rewards", "dones"])
 # MAIN LOOP
 # ---------------------------------------------------------
 if __name__ == "__main__":
-    args = tyro.cli(Args)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    device = acceleration_device()
+    seed(args.seed)
 
     # 1. Initialize Brax Environment securely on Device
     env = brax.envs.create(args.env_id, batch_size=args.n_envs, backend="spring")
