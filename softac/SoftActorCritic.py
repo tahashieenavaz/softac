@@ -47,9 +47,17 @@ class SoftActorCritic:
         state_dimension = environment.observation_space.shape[-1]
         action_dimension = environment.action_space.shape[-1]
         return state_dimension, action_dimension
-    
-    def __initialize_actor(self, state_dimension: int, action_dimension: int, environment) -> Actor:
-        return Actor(state_dimension, action_dimension, environment, self.device).to(self.device)
+
+    def __initialize_actor(
+        self, state_dimension: int, action_dimension: int, environment
+    ) -> Actor:
+        return Actor(
+            state_dimension=state_dimension,
+            action_dimension=action_dimension,
+            high=environment.action_space.high[0],
+            low=environment.action_space.low[0],
+            device=self.device,
+        ).to(self.device)
 
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
@@ -57,14 +65,18 @@ class SoftActorCritic:
         state_dimension, action_dimension = self.__get_environment_properties(
             environment=environment
         )
-        actor = 
+        actor = self.__initialize_actor(
+            state_dimension=state_dimension,
+            action_dimension=action_dimension,
+            environment=environment,
+        )
         critics = [
-            Critic(obs_dim, act_dim).to(device),
-            Critic(obs_dim, act_dim).to(device),
+            Critic(state_dimension, action_dimension).to(device),
+            Critic(state_dimension, action_dimension).to(device),
         ]
         targets = [
-            Critic(obs_dim, act_dim).to(device),
-            Critic(obs_dim, act_dim).to(device),
+            Critic(state_dimension, action_dimension).to(device),
+            Critic(state_dimension, action_dimension).to(device),
         ]
         for index, critic in enumerate(critics):
             targets[index].load_state_dict(critic.state_dict())
