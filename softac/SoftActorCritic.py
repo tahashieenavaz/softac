@@ -2,10 +2,11 @@ import brax.envs
 import torch
 
 from collections.abc import ItemsView
-from softac.modules import Actor, Critic
-from softac.functions import hard_update_all
-from softac.buffers import Buffer
+from torch.nn.functional import mse_loss
 from typing import Any, Tuple, List, Type
+from softac.modules import Actor, Critic
+from softac.functions import hard_update_all, optimizer_step
+from softac.buffers import Buffer
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
 from baloot import acceleration_device
@@ -105,7 +106,7 @@ class SoftActorCritic:
     def __action_noise(self, action_dimension: int):
         noise = torch.rand((self.num_environments, action_dimension))
         # change the range from [0, 1) to [-1, 1]
-        noise = noise * 2 - 1
+        noise = 2 * noise - 1
         return noise
 
     @torch.inference_mode()
@@ -117,6 +118,50 @@ class SoftActorCritic:
             return action_noise * actor.scale + actor.bias
         actions, _, _ = actor.get_action(states)
         return actions
+
+    def __get_q(
+        self,
+        targets: List[Critic],
+        next_states: torch.Tensor,
+        next_actions: torch.Tensor,
+        alpha: torch.Tensor,
+        next_log_pi: torch.Tensor,
+    ) -> torch.Tensor:
+        abel = torch.min(
+            targets[0](next_states, next_actions), targets[1](next_states, next_actions)
+        )
+        cain = alpha * next_log_pi
+        return abel - cain
+
+    @torch.inference_mode()
+    def __get_targets(
+        self,
+        actor: Actor,
+        targets: List[Critic],
+        next_states: torch.Tensor,
+        alpha: torch.Tensor,
+        terminations: torch.Tensor,
+        rewards: torch.Tensor,
+    ):
+        next_actions, next_log_pi, _ = actor.get_action(next_states)
+        q = self.__get_q(
+            targets=targets,
+            next_actions=next_actions,
+            alpha=alpha,
+            next_log_pi=next_log_pi,
+        )
+        return rewards + (1 - terminations) * self.gamma * q
+
+    def __critic_loss(
+        self,
+        critics: List[Critic],
+        targets: torch.Tensor,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+    ) -> torch.Tensor:
+        reason = critics[0](states, actions)
+        emotion = critics[1](states, actions)
+        return mse_loss(reason, targets) + mse_loss(emotion, targets)
 
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
@@ -139,7 +184,6 @@ class SoftActorCritic:
         critic_optimizer = self.__initialize_critic_optimizer(critics=critics)
         actor_optimizer = self.__initialize_actor_optimizer(actor=actor)
         log_alpha_optimizer = self.__initialize_log_alpha_optimizer(log_alpha=log_alpha)
-
         target_entropy = self.__target_entropy(action_dimension=action_dimension)
 
         alpha = log_alpha.exp().item()
@@ -164,5 +208,19 @@ class SoftActorCritic:
             terminations = _terminations.float()
             buffer.add(states, next_states, actions, rewards, terminations)
             states = next_states
+
+            if step > self.learning_starts:
+                data = buffer.sample(self.batch_size)
+                targets = self.__get_targets(
+                    actor=actor,
+                    targets=targets,
+                    alpha=alpha,
+                    next_states=data.next_states,
+                    terminations=data.terminations,
+                )
+                critic_loss = self.__critic_loss(
+                    critics=critics, targets=targets, actions=data.actions
+                )
+                optimizer_step(optimizer=critic_optimizer, loss=critic_loss)
 
         pass
