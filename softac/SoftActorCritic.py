@@ -1,9 +1,9 @@
 import brax.envs
+import torch
 
 from collections.abc import ItemsView
 from softac.modules import Actor, Critic
-from typing import Any
-from typing import Tuple
+from typing import Any, Tuple, List, Type
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
 from baloot import acceleration_device, seed as baloot_seed
@@ -25,6 +25,8 @@ class SoftActorCritic:
         target_network_frequency: int = 1,
         alpha: float = 0.2,
         autotune: bool = True,
+        num_critics: int = 2,
+        critic_activation: Type[torch.nn.Module] = torch.nn.GELU,
     ):
         self.__set_attributes(locals().items())
         self.device = acceleration_device()
@@ -59,6 +61,19 @@ class SoftActorCritic:
             device=self.device,
         ).to(self.device)
 
+    def __initialize_critics(
+        self, state_dimension: int, action_dimension: int
+    ) -> List[Critic]:
+        def __make_critic() -> Critic:
+            return Critic(
+                state_dimension=state_dimension,
+                action_dimension=action_dimension,
+                activation=self.critic_activation,
+                hidden_dimension=self.critic_hidden_dimension,
+            ).to(self.device)
+
+        return [__make_critic() for _ in range(self.num_critics)]
+
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
         environment = self.__create_environments(environment_name=environment_name)
@@ -70,14 +85,10 @@ class SoftActorCritic:
             action_dimension=action_dimension,
             environment=environment,
         )
-        critics = [
-            Critic(state_dimension, action_dimension).to(device),
-            Critic(state_dimension, action_dimension).to(device),
-        ]
-        targets = [
-            Critic(state_dimension, action_dimension).to(device),
-            Critic(state_dimension, action_dimension).to(device),
-        ]
+        critics = self.__initialize_critics(
+            state_dimension=state_dimension, action_dimension=action_dimension
+        )
+        targets = self.__initialize_critics()
         for index, critic in enumerate(critics):
             targets[index].load_state_dict(critic.state_dict())
 
