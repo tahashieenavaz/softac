@@ -11,9 +11,6 @@ Batch = namedtuple("Batch", ["obs", "next_obs", "actions", "rewards", "dones"])
 # ---------------------------------------------------------
 if __name__ == "__main__":
 
-    q_opt = optim.Adam(list(qf1.parameters()) + list(qf2.parameters()), lr=args.q_lr)
-    a_opt = optim.Adam(list(actor.parameters()), lr=args.policy_lr)
-
     target_entropy = -act_dim
     log_alpha = torch.zeros(1, requires_grad=True, device=device)
     alpha_opt = optim.Adam([log_alpha], lr=args.q_lr)

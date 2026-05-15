@@ -76,6 +76,15 @@ class SoftActorCritic:
 
         return [__make_critic() for _ in range(self.num_critics)]
 
+    def __initialize_critic_optimizer(
+        self, critics: List[Critic]
+    ) -> torch.optim.Optimizer:
+        parameters = [param for critic in critics for param in critic.parameters()]
+        return torch.optim.Adam(parameters, lr=self.critic_lr)
+
+    def __initialize_actor_optimizer(self, actor: Actor):
+        return torch.optim.Adam(list(actor.parameters()), lr=self.actor_lr)
+
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
         environment = self.__create_environments(environment_name=environment_name)
@@ -92,4 +101,8 @@ class SoftActorCritic:
         )
         targets = self.__initialize_critics()
         hard_update_all(sources=critics, targets=targets)
+
+        critic_optimizer = self.__initialize_critic_optimizer(critics=critics)
+        actor_optimizer = self.__initialize_actor_optimizer(actor=actor)
+
         pass
