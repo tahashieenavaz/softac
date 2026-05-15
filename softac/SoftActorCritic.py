@@ -91,6 +91,14 @@ class SoftActorCritic:
     def __target_entropy(self, action_dimension: int) -> int:
         return -1 * action_dimension
 
+    def __initialize_log_alpha(self) -> torch.Tensor:
+        return torch.zeros(1, requires_grad=True, device=self.device)
+
+    def __initialize_log_alpha_optimizer(
+        self, log_alpha: torch.Tensor
+    ) -> torch.optim.Optimizer:
+        return torch.optim.Adam([log_alpha], lr=self.critic_lr)
+
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
         environment = self.__create_environments(environment_name=environment_name)
@@ -106,10 +114,17 @@ class SoftActorCritic:
             state_dimension=state_dimension, action_dimension=action_dimension
         )
         targets = self.__initialize_critics()
+        log_alpha = self.__initialize_log_alpha()
         hard_update_all(sources=critics, targets=targets)
 
         critic_optimizer = self.__initialize_critic_optimizer(critics=critics)
         actor_optimizer = self.__initialize_actor_optimizer(actor=actor)
+        log_alpha_optimizer = self.__initialize_log_alpha_optimizer(log_alpha=log_alpha)
+
         target_entropy = self.__target_entropy(action_dimension=action_dimension)
+
+        alpha = log_alpha.exp().item()
+
+        rb = TensorReplayBuffer(args.buffer_size, obs_dim, act_dim, device)
 
         pass
