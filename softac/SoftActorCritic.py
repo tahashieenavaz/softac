@@ -34,6 +34,8 @@ class SoftActorCritic:
         actor_activation: Type[torch.nn.Module] = torch.nn.GELU,
         critic_hidden_dimension: int = 256,
         actor_hidden_dimension: int = 256,
+        std_min: float = -5,
+        std_max: float = 2,
     ):
         self.__set_attributes(locals().items())
         self.device = acceleration_device()
@@ -67,7 +69,8 @@ class SoftActorCritic:
             hidden_dimension=self.actor_hidden_dimension,
             high=environment.action_space.high[0],
             low=environment.action_space.low[0],
-            device=self.device,
+            std_min=self.std_min,
+            std_max=self.std_max,
         ).to(self.device)
 
     def __initialize_critics(
