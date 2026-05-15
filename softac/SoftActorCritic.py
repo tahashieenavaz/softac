@@ -39,7 +39,7 @@ class SoftActorCritic:
     ):
         self.__set_attributes(locals().items())
         self.device = acceleration_device()
-        self.num_updates = timesteps // num_environments
+        self.num_updates = self.timesteps // self.num_environments
 
     def __set_attributes(self, items: ItemsView[str, Any]) -> None:
         for key, value in items:
