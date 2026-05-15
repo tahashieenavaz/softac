@@ -28,45 +28,39 @@ class Buffer:
 
     def add(self, states, next_states, actions, rewards, terminations):
         n = states.shape[0]
-        if self.pos + n <= self.max_size:
+
+        # we group the data together to avoid multiple repetitive slicing
+        data = (
+            (self.states, states),
+            (self.next_states, next_states),
+            (self.actions, actions),
+            (self.rewards, rewards.unsqueeze(1)),
             (
-                self.states[self.pos : self.pos + n],
-                self.next_states[self.pos : self.pos + n],
-            ) = (states, next_states)
-            self.actions[self.pos : self.pos + n] = actions
-            (
-                self.rewards[self.pos : self.pos + n],
-                self.terminations[self.pos : self.pos + n],
-            ) = rewards.unsqueeze(1), terminations.unsqueeze(1)
-            self.pos += n
-            if self.pos == self.max_size:
-                self.pos, self.full = 0, True
+                self.terminations,
+                terminations.unsqueeze(1),
+            ),
+        )
+
+        if self.pointer + n <= self.max_size:
+            for buf, dat in data:
+                buf[self.pointer : self.pointer + n] = dat
+            self.pointer += n
+            if self.pointer == self.max_size:
+                self.pointer = 0
+                self.full = True
         else:
-            fit, overflow = self.max_size - self.pos, n - (self.max_size - self.pos)
-            self.states[self.pos :], self.states[:overflow] = states[:fit], states[fit:]
-            self.next_states[self.pos :], self.next_states[:overflow] = (
-                next_states[:fit],
-                next_states[fit:],
+            fit, overflow = self.max_size - self.pointer, n - (
+                self.max_size - self.pointer
             )
-            self.actions[self.pos :], self.actions[:overflow] = (
-                actions[:fit],
-                actions[fit:],
-            )
-            self.rewards[self.pos :], self.rewards[:overflow] = rewards[:fit].unsqueeze(
-                1
-            ), rewards[fit:].unsqueeze(1)
-            self.dones[self.pos :], self.dones[:overflow] = terminations[
-                :fit
-            ].unsqueeze(1), terminations[fit:].unsqueeze(1)
-            self.pos, self.full = overflow, True
+            for buf, dat in data:
+                buf[self.pointer :] = dat[:fit]
+                buf[:overflow] = dat[fit:]
+            self.pointer, self.full = overflow, True
 
     def sample(self, batch_size: int):
-        idx = torch.randint(
-            0,
-            self.max_size if self.full else self.pos,
-            (batch_size,),
-            device=self.device,
-        )
+        high = self.max_size if self.full else self.pointer
+        idx = torch.randint(0, high, (batch_size,), device=self.device)
+
         return Batch(
             self.states[idx],
             self.next_states[idx],

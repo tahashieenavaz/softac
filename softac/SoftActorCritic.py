@@ -157,5 +157,11 @@ class SoftActorCritic:
             actions = self.__get_actions(
                 step=step, actor=actor, action_dimension=action_dimension, states=states
             )
+            next_states, rewards, _terminations, _truncations, infos = environment.step(
+                actions
+            )
+            terminations = _terminations.float()
+            buffer.add(states, next_states, actions, rewards, terminations)
+            states = next_states
 
         pass
