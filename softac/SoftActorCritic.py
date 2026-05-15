@@ -4,6 +4,7 @@ import torch
 from collections.abc import ItemsView
 from softac.modules import Actor, Critic
 from softac.functions import hard_update_all
+from softac.buffers import Buffer
 from typing import Any, Tuple, List, Type
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
@@ -34,6 +35,7 @@ class SoftActorCritic:
     ):
         self.__set_attributes(locals().items())
         self.device = acceleration_device()
+        self.num_updates = timesteps // num_environments
 
     def __set_attributes(self, items: ItemsView[str, Any]) -> None:
         for key, value in items:
@@ -99,6 +101,22 @@ class SoftActorCritic:
     ) -> torch.optim.Optimizer:
         return torch.optim.Adam([log_alpha], lr=self.critic_lr)
 
+    def __action_noise(self, action_dimension: int):
+        noise = torch.rand((self.num_environments, action_dimension))
+        # change the range from [0, 1) to [-1, 1]
+        noise = noise * 2 - 1
+        return noise
+
+    @torch.inference_mode()
+    def __get_actions(
+        self, step: int, actor: Actor, states: torch.Tensor, action_dimension: int
+    ):
+        if step < self.learning_starts:
+            action_noise = self.__action_noise(action_dimension=action_dimension)
+            return action_noise * actor.scale + actor.bias
+        actions, _, _ = actor.get_action(states)
+        return actions
+
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
         environment = self.__create_environments(environment_name=environment_name)
@@ -125,6 +143,19 @@ class SoftActorCritic:
 
         alpha = log_alpha.exp().item()
 
-        rb = TensorReplayBuffer(args.buffer_size, obs_dim, act_dim, device)
+        buffer = Buffer(
+            max_size=self.buffer_size,
+            state_dimension=state_dimension,
+            action_dimension=action_dimension,
+            device=self.device,
+        )
+
+        states, info = environment.reset()
+
+        for update in range(self.num_updates):
+            step = update * self.num_environments
+            actions = self.__get_actions(
+                step=step, actor=actor, action_dimension=action_dimension, states=states
+            )
 
         pass
