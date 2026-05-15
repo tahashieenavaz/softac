@@ -25,7 +25,7 @@ class SoftActorCritic:
         learning_starts: int = 10_000,
         actor_lr: float = 3e-4,
         critic_lr: float = 1e-3,
-        policy_frequency: int = 2,
+        actor_frequency: int = 2,
         target_network_frequency: int = 1,
         alpha: float = 0.2,
         autotune: bool = True,
@@ -158,13 +158,44 @@ class SoftActorCritic:
     def __critic_loss(
         self,
         critics: List[Critic],
-        targets: torch.Tensor,
+        q_targets: torch.Tensor,
         states: torch.Tensor,
         actions: torch.Tensor,
     ) -> torch.Tensor:
         reason = critics[0](states, actions)
         emotion = critics[1](states, actions)
-        return mse_loss(reason, targets) + mse_loss(emotion, targets)
+        return mse_loss(reason, q_targets) + mse_loss(emotion, q_targets)
+
+    def __update_critic(
+        self,
+        *,
+        critics: List[Critic],
+        q_targets: torch.Tensor,
+        actions: torch.Tensor,
+        critic_optimizer: torch.optim.Optimizer,
+    ) -> None:
+        critic_loss = self.__critic_loss(
+            critics=critics, q_targets=q_targets, actions=actions
+        )
+        optimizer_step(optimizer=critic_optimizer, loss=critic_loss)
+
+    def __update_actor(
+        self,
+        update: int,
+        actor: Actor,
+        critics: List[Critic],
+        states: torch.Tensor,
+        alpha: torch.Tensor,
+        optimizer: torch.optim.Optimizer,
+    ):
+        if update % self.actor_frequency != 0:
+            return
+
+        pi, log_pi, _ = actor.get_action(states)
+        actor_loss = (
+            (alpha * log_pi) - torch.min(critics[0](states, pi), critics[1](states, pi))
+        ).mean()
+        optimizer_step(optimizer=optimizer, loss=actor_loss)
 
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
@@ -214,16 +245,23 @@ class SoftActorCritic:
 
             if step > self.learning_starts:
                 data = buffer.sample(self.batch_size)
-                targets = self.__get_targets(
+                q_targets = self.__get_targets(
                     actor=actor,
                     targets=targets,
                     alpha=alpha,
                     next_states=data.next_states,
                     terminations=data.terminations,
                 )
-                critic_loss = self.__critic_loss(
-                    critics=critics, targets=targets, actions=data.actions
+                self.__update_critic(
+                    critics=critics, actions=data.actions, q_targets=q_targets
                 )
-                optimizer_step(optimizer=critic_optimizer, loss=critic_loss)
+                self.__update_actor(
+                    update=update,
+                    actor=actor,
+                    critics=critics,
+                    states=data.states,
+                    alpha=alpha,
+                    optimizer=actor_optimizer,
+                )
 
         pass
