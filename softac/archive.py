@@ -1,32 +1,7 @@
 from collections import namedtuple
-from dataclasses import dataclass
 
 import torch
-import brax.envs
-from brax.envs.wrappers import gym as brax_gym
-from brax.envs.wrappers import torch as brax_torch
-from baloot import acceleration_device, seed
 from softac.modules import Actor, Critic
-
-
-@dataclass
-class Args:
-    seed: int = 1
-    env_id: str = "ant"
-    total_timesteps: int = 5_000_000
-    n_envs: int = 2048  # Brax handles massive batches!
-    buffer_size: int = int(1e6)
-    gamma: float = 0.99
-    tau: float = 0.005
-    batch_size: int = 2048
-    learning_starts: int = 10_000
-    policy_lr: float = 3e-4
-    q_lr: float = 1e-3
-    policy_freq: int = 2
-    target_network_freq: int = 1
-    alpha: float = 0.2
-    autotune: bool = True
-
 
 Batch = namedtuple("Batch", ["obs", "next_obs", "actions", "rewards", "dones"])
 
@@ -35,22 +10,6 @@ Batch = namedtuple("Batch", ["obs", "next_obs", "actions", "rewards", "dones"])
 # MAIN LOOP
 # ---------------------------------------------------------
 if __name__ == "__main__":
-    device = acceleration_device()
-    seed(args.seed)
-
-    # 1. Initialize Brax Environment securely on Device
-    env = brax.envs.create(args.env_id, batch_size=args.n_envs, backend="spring")
-    env = brax_gym.VectorGymWrapper(env)
-    env = brax_torch.TorchWrapper(env, device=device)
-
-    obs_dim = env.observation_space.shape[-1]
-    act_dim = env.action_space.shape[-1]
-
-    actor = Actor(obs_dim, act_dim, env, device).to(device)
-    critics = [Critic(obs_dim, act_dim).to(device), Critic(obs_dim, act_dim).to(device)]
-    targets = [Critic(obs_dim, act_dim).to(device), Critic(obs_dim, act_dim).to(device)]
-    for index, critic in enumerate(critics):
-        targets[index].load_state_dict(critic.state_dict())
 
     q_opt = optim.Adam(list(qf1.parameters()) + list(qf2.parameters()), lr=args.q_lr)
     a_opt = optim.Adam(list(actor.parameters()), lr=args.policy_lr)
