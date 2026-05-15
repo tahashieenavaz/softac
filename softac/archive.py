@@ -1,7 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass
 
-import numpy as np
 import torch
 import brax.envs
 from brax.envs.wrappers import gym as brax_gym
