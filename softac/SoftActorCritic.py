@@ -90,7 +90,7 @@ class SoftActorCritic:
             state_dimension=state_dimension, action_dimension=action_dimension
         )
         targets = self.__initialize_critics()
-        for index, critic in enumerate(critics):
-            targets[index].load_state_dict(critic.state_dict())
+        for critic, target in zip(critics, targets):
+            target.load_state_dict(critic.state_dict())
 
         pass
