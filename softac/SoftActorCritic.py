@@ -20,15 +20,17 @@ class SoftActorCritic:
         tau: float = 0.005,
         batch_size: int = 2048,
         learning_starts: int = 10_000,
-        policy_lr: float = 3e-4,
-        q_lr: float = 1e-3,
+        actor_lr: float = 3e-4,
+        critic_lr: float = 1e-3,
         policy_frequency: int = 2,
         target_network_frequency: int = 1,
         alpha: float = 0.2,
         autotune: bool = True,
         num_critics: int = 2,
         critic_activation: Type[torch.nn.Module] = torch.nn.GELU,
+        actor_activation: Type[torch.nn.Module] = torch.nn.GELU,
         critic_hidden_dimension: int = 256,
+        actor_hidden_dimension: int = 256,
     ):
         self.__set_attributes(locals().items())
         self.device = acceleration_device()
@@ -58,6 +60,7 @@ class SoftActorCritic:
         return Actor(
             state_dimension=state_dimension,
             action_dimension=action_dimension,
+            hidden_dimension=self.actor_hidden_dimension,
             high=environment.action_space.high[0],
             low=environment.action_space.low[0],
             device=self.device,
@@ -85,6 +88,9 @@ class SoftActorCritic:
     def __initialize_actor_optimizer(self, actor: Actor):
         return torch.optim.Adam(list(actor.parameters()), lr=self.actor_lr)
 
+    def __target_entropy(self, action_dimension: int) -> int:
+        return -1 * action_dimension
+
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
         environment = self.__create_environments(environment_name=environment_name)
@@ -104,5 +110,6 @@ class SoftActorCritic:
 
         critic_optimizer = self.__initialize_critic_optimizer(critics=critics)
         actor_optimizer = self.__initialize_actor_optimizer(actor=actor)
+        target_entropy = self.__target_entropy(action_dimension=action_dimension)
 
         pass
