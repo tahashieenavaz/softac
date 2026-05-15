@@ -48,8 +48,8 @@ class SoftActorCritic:
         action_dimension = environment.action_space.shape[-1]
         return state_dimension, action_dimension
     
-    def __initialize_actor(self, state_dimension: int, action_dimension: int, environment):
-        return Actor(state_dimension, action_dimension, env, self.device).to(self.device)
+    def __initialize_actor(self, state_dimension: int, action_dimension: int, environment) -> Actor:
+        return Actor(state_dimension, action_dimension, environment, self.device).to(self.device)
 
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
