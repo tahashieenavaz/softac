@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "softac"
+version = "0.0.01"
+authors = [
+  { name="Taha Shieenavaz", email="tahashieenavaz@gmail.com" },
+]
+description = "Soft Actor-Critic PyTorch implementation by Tuomas Haarnoja, Aurick Zhou, Pieter Abbeel, and Sergey Levine."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["torch"]
+keywords = ["drl", "deep reinforcement learning", "soft actor critic", "sac"]
+license = { file = "LICENSE" }
+urls = { Homepage="https://github.com/tahashieenavaz/softac", Repository="https://github.com/tahashieenavaz/softac", Documentation="https://github.com/tahashieenavaz/softac#readme" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.package-data]
+softac = ["*.md", "*.txt", "*.png"]
