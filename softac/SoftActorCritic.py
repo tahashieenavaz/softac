@@ -3,7 +3,7 @@ import torch
 
 from collections.abc import ItemsView
 from softac.modules import Actor, Critic
-from softac.functions import hard_update
+from softac.functions import hard_update_all
 from typing import Any, Tuple, List, Type
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
@@ -91,7 +91,5 @@ class SoftActorCritic:
             state_dimension=state_dimension, action_dimension=action_dimension
         )
         targets = self.__initialize_critics()
-        for critic, target in zip(critics, targets):
-            hard_update(source=critic, target=target)
-
+        hard_update_all(sources=critics, targets=targets)
         pass
