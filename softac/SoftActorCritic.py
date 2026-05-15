@@ -8,7 +8,8 @@ from softac.buffers import Buffer
 from typing import Any, Tuple, List, Type
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
-from baloot import acceleration_device, seed as baloot_seed
+from baloot import acceleration_device
+from baloot import seed as baloot_seed
 
 
 class SoftActorCritic:

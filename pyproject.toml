@@ -19,7 +19,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["torch"]
+dependencies = ["torch", "brax"]
 keywords = ["drl", "deep reinforcement learning", "soft actor critic", "sac"]
 license = { file = "LICENSE" }
 urls = { Homepage="https://github.com/tahashieenavaz/softac", Repository="https://github.com/tahashieenavaz/softac", Documentation="https://github.com/tahashieenavaz/softac#readme" }
