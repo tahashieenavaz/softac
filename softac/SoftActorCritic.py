@@ -27,6 +27,7 @@ class SoftActorCritic:
         autotune: bool = True,
         num_critics: int = 2,
         critic_activation: Type[torch.nn.Module] = torch.nn.GELU,
+        critic_hidden_dimension: int = 256,
     ):
         self.__set_attributes(locals().items())
         self.device = acceleration_device()
