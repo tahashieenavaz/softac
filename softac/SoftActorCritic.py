@@ -172,12 +172,12 @@ class SoftActorCritic:
         critics: List[Critic],
         q_targets: torch.Tensor,
         actions: torch.Tensor,
-        critic_optimizer: torch.optim.Optimizer,
+        optimizer: torch.optim.Optimizer,
     ) -> None:
         critic_loss = self.__critic_loss(
             critics=critics, q_targets=q_targets, actions=actions
         )
-        optimizer_step(optimizer=critic_optimizer, loss=critic_loss)
+        optimizer_step(optimizer=optimizer, loss=critic_loss)
 
     def __update_actor(
         self,
@@ -253,7 +253,10 @@ class SoftActorCritic:
                     terminations=data.terminations,
                 )
                 self.__update_critic(
-                    critics=critics, actions=data.actions, q_targets=q_targets
+                    critics=critics,
+                    actions=data.actions,
+                    q_targets=q_targets,
+                    optimizer=critic_optimizer,
                 )
                 self.__update_actor(
                     update=update,
