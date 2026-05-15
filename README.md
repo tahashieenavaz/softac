@@ -13,5 +13,5 @@ By combining off-policy updates with a stable stochastic actor-critic formulatio
 ## Algorithm
 
 <div align="center">
-    <img src="./figures/algorithm.png" width=300 />
+    <img src="./figures/algorithm.png" width=400 />
 </div>
