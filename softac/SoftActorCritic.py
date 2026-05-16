@@ -197,6 +197,21 @@ class SoftActorCritic:
         ).mean()
         optimizer_step(optimizer=optimizer, loss=actor_loss)
 
+    def __get_log_pi(
+        self, *, states: torch.Tensor, actor: Actor, gradient: bool = True
+    ):
+        with torch.set_gradient_enabled(gradient):
+            _, log_pi, _ = actor.get_action(states)
+        return log_pi
+
+    def __alpha_loss(
+        self,
+        target_entropy: torch.Tensor,
+        log_pi: torch.Tensor,
+        log_alpha: torch.Tensor,
+    ) -> torch.Tensor:
+        return (-log_alpha.exp() * (log_pi + target_entropy)).mean()
+
     def train(self, seed: int, environment_name: str):
         baloot_seed(seed)
         environment = self.__create_environments(environment_name=environment_name)
@@ -266,5 +281,17 @@ class SoftActorCritic:
                     alpha=alpha,
                     optimizer=actor_optimizer,
                 )
+
+                if self.train_alpha:
+                    log_pi = self.__get_log_pi(
+                        states=data.states, actor=actor, gradient=False
+                    )
+                    log_pi_loss = self.__alpha_loss(
+                        target_entropy=target_entropy,
+                        log_pi=log_pi,
+                        log_alpha=log_alpha,
+                    )
+                    optimizer_step(optimizer=log_alpha_optimizer, loss=log_pi_loss)
+                    alpha = log_alpha.exp().item()
 
         pass
