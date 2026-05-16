@@ -5,7 +5,7 @@ from collections.abc import ItemsView
 from torch.nn.functional import mse_loss
 from typing import Any, Tuple, List, Type
 from softac.modules import Actor, Critic
-from softac.functions import hard_update_all, optimizer_step
+from softac.functions import hard_update_all, optimizer_step, soft_update_all
 from softac.buffers import Buffer
 from brax.envs.wrappers import gym as brax_gym
 from brax.envs.wrappers import torch as brax_torch
@@ -295,9 +295,5 @@ class SoftActorCritic:
                     alpha = log_alpha.exp().item()
 
             if update % self.target_network_frequency == 0:
-                for p, tp in zip(
-                    list(qf1.parameters()) + list(qf2.parameters()),
-                    list(qf1_t.parameters()) + list(qf2_t.parameters()),
-                ):
-                    tp.data.copy_(args.tau * p.data + (1 - args.tau) * tp.data)
+                soft_update_all(sources=critics, targets=targets)
         pass
