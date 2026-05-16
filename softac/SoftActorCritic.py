@@ -28,7 +28,7 @@ class SoftActorCritic:
         actor_frequency: int = 2,
         target_network_frequency: int = 1,
         alpha: float = 0.2,
-        autotune: bool = True,
+        train_alpha: bool = True,
         num_critics: int = 2,
         critic_activation: Type[torch.nn.Module] = torch.nn.GELU,
         actor_activation: Type[torch.nn.Module] = torch.nn.GELU,
@@ -171,11 +171,15 @@ class SoftActorCritic:
         *,
         critics: List[Critic],
         q_targets: torch.Tensor,
+        states: torch.Tensor,
         actions: torch.Tensor,
         optimizer: torch.optim.Optimizer,
     ) -> None:
         critic_loss = self.__critic_loss(
-            critics=critics, q_targets=q_targets, actions=actions
+            critics=critics,
+            q_targets=q_targets,
+            states=states,
+            actions=actions,
         )
         optimizer_step(optimizer=optimizer, loss=critic_loss)
 
@@ -226,7 +230,10 @@ class SoftActorCritic:
         critics = self.__initialize_critics(
             state_dimension=state_dimension, action_dimension=action_dimension
         )
-        targets = self.__initialize_critics()
+        targets = self.__initialize_critics(
+            state_dimension=state_dimension, action_dimension=action_dimension
+        )
+
         log_alpha = self.__initialize_log_alpha()
         hard_update_all(sources=critics, targets=targets)
 
@@ -266,9 +273,11 @@ class SoftActorCritic:
                     alpha=alpha,
                     next_states=data.next_states,
                     terminations=data.terminations,
+                    rewards=data.rewards,
                 )
                 self.__update_critic(
                     critics=critics,
+                    states=data.states,
                     actions=data.actions,
                     q_targets=q_targets,
                     optimizer=critic_optimizer,
@@ -295,5 +304,4 @@ class SoftActorCritic:
                     alpha = log_alpha.exp().item()
 
             if update % self.target_network_frequency == 0:
-                soft_update_all(sources=critics, targets=targets)
-        pass
+                soft_update_all(sources=critics, targets=targets, tau=self.tau)
