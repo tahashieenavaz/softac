@@ -294,4 +294,10 @@ class SoftActorCritic:
                     optimizer_step(optimizer=log_alpha_optimizer, loss=log_pi_loss)
                     alpha = log_alpha.exp().item()
 
+            if update % self.target_network_frequency == 0:
+                for p, tp in zip(
+                    list(qf1.parameters()) + list(qf2.parameters()),
+                    list(qf1_t.parameters()) + list(qf2_t.parameters()),
+                ):
+                    tp.data.copy_(args.tau * p.data + (1 - args.tau) * tp.data)
         pass
